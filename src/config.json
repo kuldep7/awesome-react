@@ -1,0 +1,76 @@
+{
+  "common": {
+    "dependencies": ["react", "react-dom", "react-router-dom", "axios"],
+    "devDependencies": [
+      "eslint",
+      "prettier",
+      "eslint-config-prettier",
+      "eslint-plugin-prettier",
+      "eslint-plugin-react",
+      "eslint-plugin-react-hooks",
+      "vite",
+      "lint-staged",
+      "husky"
+    ],
+    "eslint": {
+      "extends": [
+        "eslint:recommended",
+        "plugin:react/recommended",
+        "plugin:prettier/recommended"
+      ],
+      "plugins": ["react", "react-hooks"],
+      "rules": {
+        "react-hooks/rules-of-hooks": "error",
+        "react-hooks/exhaustive-deps": "warn",
+        "react/prop-types": "off",
+        "react/react-in-jsx-scope": "off"
+      }
+    }
+  },
+  "tailwind": {
+    "eslint": {
+      "extends": ["plugin:tailwindcss/recommended"],
+      "plugins": [
+        "tailwindcss",
+        "prettier-plugin-tailwindcss",
+        "eslint-plugin-tailwindcss"
+      ],
+      "rules": {
+        "tailwindcss/classnames-order": "warn",
+        "tailwindcss/no-custom-classname": "warn",
+        "tailwindcss/no-contradicting-classname": "error"
+      }
+    },
+    "dependencies": [],
+    "devDependencies": [
+      "tailwindcss",
+      "postcss",
+      "autoprefixer",
+      "prettier-plugin-tailwindcss",
+      "eslint-plugin-tailwindcss"
+    ]
+  },
+  "typescript": {
+    "dependencies": [],
+    "devDependencies": [
+      "@types/node",
+      "@types/react",
+      "@types/react-dom",
+      "@typescript-eslint/eslint-plugin",
+      "@typescript-eslint/parser",
+      "typescript",
+      "vite-tsconfig-paths"
+    ],
+    "eslint": {
+      "extends": [
+        "plugin:@typescript-eslint/eslint-recommended",
+        "plugin:@typescript-eslint/recommended"
+      ],
+      "plugins": ["@typescript-eslint"],
+      "rules": {
+        "@typescript-eslint/explicit-module-boundary-types": "off",
+        "@typescript-eslint/no-non-null-assertion": "off"
+      }
+    }
+  }
+}
