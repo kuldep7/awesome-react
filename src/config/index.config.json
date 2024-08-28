@@ -7,8 +7,8 @@
       "eslint-config-prettier",
       "eslint-plugin-prettier",
       "eslint-plugin-react",
-      "eslint-plugin-react-hooks",
       "vite",
+      "@vitejs/plugin-react",
       "lint-staged",
       "husky"
     ],
@@ -72,5 +72,16 @@
         "@typescript-eslint/no-non-null-assertion": "off"
       }
     }
+  },
+  "mui": {
+    "dependencies": [
+      "@mui/material",
+      "@emotion/react",
+      "@emotion/styled",
+      "@mui/icons-material",
+      "@fontsource/roboto"
+    ],
+    "devDependencies": [],
+    "eslint": []
   }
 }

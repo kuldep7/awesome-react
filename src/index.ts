@@ -3,9 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import minimist from 'minimist';
 import prompts from 'prompts';
+
 import { cyan, red, reset, yellow } from 'kolorist';
-import CONFIG from './config.json';
-import { getPackageLatestVersion } from './packages.helper';
+import { getPackageLatestVersion } from './helpers/packages.helper';
 import {
   emptyDir,
   formatTargetDir,
@@ -14,14 +14,14 @@ import {
   pkgFromUserAgent,
   toValidPackageName,
   write,
-} from './helper';
+} from './helpers/main.helper';
+import MAIN_CONFIG from './config';
 
 const argv = minimist<{
-  template?: string;
   help?: boolean;
 }>(process.argv.slice(2), {
   default: { help: false },
-  alias: { h: 'help', t: 'template' },
+  alias: { h: 'help' },
   string: ['_'],
 });
 const cwd = process.cwd();
@@ -139,10 +139,6 @@ async function init() {
               title: yellow('MUI'),
               value: 'mui',
             },
-            {
-              title: yellow('Antd'),
-              value: 'antd',
-            },
           ],
         },
         {
@@ -173,7 +169,7 @@ async function init() {
     return;
   }
 
-  const { overwrite, packageName, tailwindCSS, typescript } = result;
+  const { overwrite, packageName, tailwindCSS, typescript, uiLibrary } = result;
 
   const root = path.join(cwd, targetDir);
 
@@ -183,9 +179,8 @@ async function init() {
     fs.mkdirSync(root, { recursive: true });
   }
 
-  const pkgInfo = pkgFromUserAgent(process.env.npm_config_user_agent);
+  const pkgInfo = pkgFromUserAgent(process.env.npm_MAIN_CONFIG_user_agent);
   const pkgManager = pkgInfo ? pkgInfo.name : 'npm';
-  const isYarn1 = pkgManager === 'yarn' && pkgInfo?.version.startsWith('1.');
 
   console.log(`${reset(`\nScaffolding project in ${root}...\n`)}`);
   const template = typescript ? 'template-main' : 'template-main';
@@ -196,7 +191,7 @@ async function init() {
     template,
   );
 
-  const { eslint, ...packages } = CONFIG.common;
+  const { eslint, ...packageJsonDependencies } = MAIN_CONFIG.common;
   let eslintrc = await fs.promises.readFile(`${templateDir}/.eslintrc`, 'utf8');
   eslintrc = { ...JSON.parse(eslintrc), ...eslint };
   let packageJson = await fs.promises.readFile(
@@ -205,17 +200,21 @@ async function init() {
   );
   packageJson = {
     ...JSON.parse(packageJson),
-    ...packages,
+    ...packageJsonDependencies,
     name: packageName || targetDir,
   };
 
   if (tailwindCSS) {
     mutateConfigs({ eslintrc, packageJson }, 'tailwind');
   }
+  if (uiLibrary) {
+    mutateConfigs({ eslintrc, packageJson }, 'mui');
+  }
   if (typescript) {
     mutateConfigs({ eslintrc, packageJson }, 'typescript');
   }
-  await populatePackageJson({ packageJson });
+
+  await populateDependenciesWithLatestVersion({ packageJson });
 
   const files = fs.readdirSync(templateDir);
   for (const file of files.filter(
@@ -223,17 +222,21 @@ async function init() {
   )) {
     write(file, { templateDir, root });
   }
-  write('.eslintrc', { templateDir, root }, JSON.stringify(eslintrc));
-  write('package.json', { templateDir, root }, JSON.stringify(packageJson));
+  write('.eslintrc', { templateDir, root }, JSON.stringify(eslintrc, null, 2));
+  write(
+    `package.json`,
+    { templateDir, root },
+    JSON.stringify(packageJson, null, 2),
+  );
 }
 
 async function mutateConfigs(
   { eslintrc, packageJson }: any,
-  type: 'tailwind' | 'typescript',
+  type: IMutateConfig,
 ) {
-  const { eslint, ...packages } = CONFIG[type];
+  const { eslint, ...packageJsonDependencies } = MAIN_CONFIG[type];
 
-  Object.entries(packages).map(([key, value]) => {
+  Object.entries(packageJsonDependencies).map(([key, value]) => {
     packageJson[key] = [...new Set([...packageJson[key], ...value])];
   });
   Object.entries(eslint).map(([key, value]) => {
@@ -247,7 +250,7 @@ async function mutateConfigs(
   });
 }
 
-async function populatePackageJson({ packageJson }: any) {
+async function populateDependenciesWithLatestVersion({ packageJson }: any) {
   const deps = [...packageJson.dependencies];
   const devDeps = [...packageJson.devDependencies];
   packageJson.dependencies = {};
