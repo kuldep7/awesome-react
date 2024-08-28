@@ -29,7 +29,7 @@
     "postinstall": "npx husky init && npx husky add .husky/pre-commit \"npx lint-staged\""
   },
   "lint-staged": {
-    "*.{js,ts,jsx,tsx,json}": [
+    "*.{js,ts,jsx,tsx,json,html,css,scss}": [
       "prettier --write",
       "npm run lint:eslint:fix",
       "git add --force"
