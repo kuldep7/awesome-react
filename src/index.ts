@@ -15,8 +15,11 @@ import {
   toValidPackageName,
   write,
 } from './helpers/main.helper';
+
+// Import the MAIN_CONFIG object which contains configuration for the project
 import MAIN_CONFIG from './config';
 
+// Parse command-line arguments using minimist
 const argv = minimist<{
   help?: boolean;
 }>(process.argv.slice(2), {
@@ -24,6 +27,8 @@ const argv = minimist<{
   alias: { h: 'help' },
   string: ['_'],
 });
+
+// Get the current working directory
 const cwd = process.cwd();
 
 // prettier-ignore
@@ -34,6 +39,7 @@ Create a new Vite project in JavaScript or TypeScript.
 With no arguments, start the CLI in interactive mode.
 `
 
+// Define the default target directory for the new project
 const defaultTargetDir = 'react-project';
 
 async function init() {
@@ -171,20 +177,26 @@ async function init() {
 
   const { overwrite, packageName, tailwindCSS, typescript, uiLibrary } = result;
 
+  // Get the absolute path of the target directory
   const root = path.join(cwd, targetDir);
 
+  // Check if the target directory already exists and is not empty
   if (overwrite === 'yes') {
     emptyDir(root);
   } else if (!fs.existsSync(root)) {
     fs.mkdirSync(root, { recursive: true });
   }
 
+  // Get information about the package manager being used
   const pkgInfo = pkgFromUserAgent(process.env.npm_MAIN_CONFIG_user_agent);
   const pkgManager = pkgInfo ? pkgInfo.name : 'npm';
 
   console.log(`${reset(`\nScaffolding project in ${root}...\n`)}`);
+
+  // Define the template directory based on whether TypeScript is enabled
   const template = typescript ? 'template-main' : 'template-main';
 
+  // Get the absolute path of the template directory
   const templateDir = path.resolve(
     fileURLToPath(import.meta.url),
     './..',
@@ -192,36 +204,50 @@ async function init() {
   );
 
   const { eslint, ...packageJsonDependencies } = MAIN_CONFIG.common;
+
+  // Read the contents of .eslintrc and package.json files in the template directory
   let eslintrc = await fs.promises.readFile(`${templateDir}/.eslintrc`, 'utf8');
   eslintrc = { ...JSON.parse(eslintrc), ...eslint };
   let packageJson = await fs.promises.readFile(
     `${templateDir}/package.json`,
     'utf8',
   );
+
+  // Parse the contents of .eslintrc and package.json files as JSON objects
+  eslintrc = { ...JSON.parse(eslintrc), ...eslint };
   packageJson = {
     ...JSON.parse(packageJson),
     ...packageJsonDependencies,
     name: packageName || targetDir,
   };
 
+  // If Tailwind CSS is enabled, mutate the configs for ESLint and package.json
   if (tailwindCSS) {
     mutateConfigs({ eslintrc, packageJson }, 'tailwind');
   }
+
+  // If a UI library is selected, mutate the configs for ESLint and package.json
   if (uiLibrary) {
     mutateConfigs({ eslintrc, packageJson }, 'mui');
   }
+
+  // If TypeScript is enabled, mutate the configs for ESLint and package.json
   if (typescript) {
     mutateConfigs({ eslintrc, packageJson }, 'typescript');
   }
 
+  // Get the latest versions of dependencies from npm registry
   await populateDependenciesWithLatestVersion({ packageJson });
 
+  // Read the contents of all files in the template directory except .eslintrc and package.json
   const files = fs.readdirSync(templateDir);
   for (const file of files.filter(
     (f) => !['.eslintrc', 'package.json'].includes(f),
   )) {
     write(file, { templateDir, root });
   }
+
+  // Write the contents of .eslintrc and package.json files to the target directory
   write('.eslintrc', { templateDir, root }, JSON.stringify(eslintrc, null, 2));
   write(
     `package.json`,
@@ -230,12 +256,14 @@ async function init() {
   );
 }
 
+// This function takes the eslintrc and packageJson objects and mutates them according to the type of feature being added
 async function mutateConfigs(
   { eslintrc, packageJson }: any,
   type: IMutateConfig,
 ) {
   const { eslint, ...packageJsonDependencies } = MAIN_CONFIG[type];
 
+  // add the dependencies and eslint configurations from the MAIN_CONFIG object to the respective objects
   Object.entries(packageJsonDependencies).map(([key, value]) => {
     packageJson[key] = [...new Set([...packageJson[key], ...value])];
   });
@@ -250,6 +278,7 @@ async function mutateConfigs(
   });
 }
 
+// this function takes the packageJson object from the mutateConfigs and adds the latest version of each dependency to it
 async function populateDependenciesWithLatestVersion({ packageJson }: any) {
   const deps = [...packageJson.dependencies];
   const devDeps = [...packageJson.devDependencies];
