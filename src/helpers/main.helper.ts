@@ -1,8 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import spawn from 'cross-spawn';
+import type { SpawnOptions } from 'node:child_process';
 
 const renameFiles: Record<string, string | undefined> = {
   _gitignore: '.gitignore',
+  package_json: 'package.json'
 };
 
 function isValidPackageName(projectName: string) {
@@ -35,7 +38,7 @@ function pkgFromUserAgent(userAgent: string | undefined) {
   const pkgSpecArr = pkgSpec.split('/');
   return {
     name: pkgSpecArr[0],
-    version: pkgSpecArr[1],
+    version: pkgSpecArr[1]
   };
 }
 
@@ -60,7 +63,7 @@ function copyDir(srcDir: string, destDir: string) {
   }
 }
 
-const write = (file: string, dirs: IWriteDirs, content?: string) => {
+const writeToFile = (file: string, dirs: IWriteDirs, content?: string) => {
   const { templateDir, root } = dirs;
   const targetPath = path.join(root, renameFiles[file] ?? file);
   if (content) {
@@ -79,6 +82,24 @@ function copy(src: string, dest: string) {
   }
 }
 
+function executeCliCommand(
+  command: string,
+  args?: readonly string[],
+  options?: SpawnOptions,
+  isSync: boolean = false
+) {
+  if (isSync) {
+    return spawn.sync(command, args, {
+      stdio: 'inherit',
+      ...options
+    });
+  }
+  return spawn(command, args, {
+    stdio: 'inherit',
+    ...options
+  });
+}
+
 export {
   isValidPackageName,
   toValidPackageName,
@@ -87,5 +108,6 @@ export {
   pkgFromUserAgent,
   emptyDir,
   copy,
-  write,
+  writeToFile,
+  executeCliCommand
 };

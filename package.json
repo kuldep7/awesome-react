@@ -16,17 +16,33 @@
     "dev": "unbuild --stub",
     "build": "unbuild",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "lint:fix": "eslint --fix",
+    "lint:staged": "lint-staged",
+    "postinstall": "npx husky init && echo \"npm run lint:staged $1\" > .husky/pre-commit",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,jsx,tsx,json}": [
+      "prettier --write",
+      "npm run lint:fix",
+      "git add --force"
+    ]
   },
   "engines": {
     "node": "^18.0.0 || >=20.0.0"
   },
   "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
     "@types/minimist": "^1.2.5",
     "@types/prompts": "^2.4.9",
     "cross-spawn": "^7.0.3",
+    "eslint": "^9.9.1",
+    "husky": "^9.1.5",
     "kolorist": "^1.8.0",
+    "lint-staged": "^15.2.9",
     "minimist": "^1.2.8",
+    "prettier": "^3.3.3",
     "prompts": "^2.4.2",
     "unbuild": "^2.0.0"
   }

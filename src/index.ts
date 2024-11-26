@@ -8,16 +8,17 @@ import { cyan, red, reset, yellow } from 'kolorist';
 import { getPackageLatestVersion } from './helpers/packages.helper';
 import {
   emptyDir,
+  executeCliCommand,
   formatTargetDir,
   isEmpty,
   isValidPackageName,
   pkgFromUserAgent,
   toValidPackageName,
-  write,
+  writeToFile
 } from './helpers/main.helper';
 
 // Import the MAIN_CONFIG object which contains configuration for the project
-import MAIN_CONFIG from './config';
+import MAIN_CONFIG, { TAILWIND_CONFIG } from './config';
 
 // Parse command-line arguments using minimist
 const argv = minimist<{
@@ -25,7 +26,7 @@ const argv = minimist<{
 }>(process.argv.slice(2), {
   default: { help: false },
   alias: { h: 'help' },
-  string: ['_'],
+  string: ['_']
 });
 
 // Get the current working directory
@@ -44,7 +45,7 @@ const defaultTargetDir = 'react-project';
 
 async function init() {
   const argTargetDir = formatTargetDir(argv._[0]) || '';
-  const help = argv.help;
+  const { help } = argv;
   if (help) {
     console.log(`${yellow(helpMessage)}`);
     return;
@@ -57,7 +58,7 @@ async function init() {
   let result: prompts.Answers<IResultAnswers>;
 
   prompts.override({
-    overwrite: argv.overwrite,
+    overwrite: argv.overwrite
   });
   try {
     result = await prompts(
@@ -69,7 +70,7 @@ async function init() {
           initial: targetDir,
           onState: (state) => {
             targetDir = formatTargetDir(state.value) || targetDir;
-          },
+          }
         },
         {
           type: () =>
@@ -80,23 +81,23 @@ async function init() {
               (targetDir === '.'
                 ? 'Current directory'
                 : `Target directory "${targetDir}"`) +
-                ` is not empty. Please choose how to proceed : `,
+                ` is not empty. Please choose how to proceed : `
             ),
           initial: 0,
           choices: [
             {
               title: yellow('Remove existing files and continue'),
-              value: 'yes',
+              value: 'yes'
             },
             {
               title: yellow('Cancel operation'),
-              value: 'no',
+              value: 'no'
             },
             {
               title: yellow('Ignore files and continue'),
-              value: 'ignore',
-            },
-          ],
+              value: 'ignore'
+            }
+          ]
         },
         {
           type: (_, { overwrite }: { overwrite?: string }) => {
@@ -105,7 +106,7 @@ async function init() {
             }
             return null;
           },
-          name: 'overwriteChecker',
+          name: 'overwriteChecker'
         },
         {
           type: () => (isValidPackageName(getProjectName()) ? null : 'text'),
@@ -113,7 +114,7 @@ async function init() {
           message: cyan('Package name : '),
           initial: () => toValidPackageName(getProjectName()),
           validate: (dir) =>
-            isValidPackageName(dir) || 'Invalid package.json name',
+            isValidPackageName(dir) || 'Invalid package.json name'
         },
         {
           type: 'select',
@@ -123,13 +124,13 @@ async function init() {
           choices: [
             {
               title: yellow('Yes'),
-              value: true,
+              value: true
             },
             {
               title: yellow('No'),
-              value: false,
-            },
-          ],
+              value: false
+            }
+          ]
         },
         {
           type: 'select',
@@ -139,13 +140,13 @@ async function init() {
           choices: [
             {
               title: yellow('None'),
-              value: 'none',
+              value: 'none'
             },
             {
               title: yellow('MUI'),
-              value: 'mui',
-            },
-          ],
+              value: 'mui'
+            }
+          ]
         },
         {
           type: 'select',
@@ -155,20 +156,20 @@ async function init() {
           choices: [
             {
               title: yellow('Yes'),
-              value: true,
+              value: true
             },
             {
               title: yellow('No'),
-              value: false,
-            },
-          ],
-        },
+              value: false
+            }
+          ]
+        }
       ],
       {
         onCancel: () => {
           throw new Error(red('✖') + ' Operation cancelled');
-        },
-      },
+        }
+      }
     );
   } catch (cancelled: any) {
     console.log(cancelled.message);
@@ -200,7 +201,7 @@ async function init() {
   const templateDir = path.resolve(
     fileURLToPath(import.meta.url),
     './..',
-    template,
+    template
   );
 
   const { eslint, ...packageJsonDependencies } = MAIN_CONFIG.common;
@@ -209,21 +210,34 @@ async function init() {
   let eslintrc = await fs.promises.readFile(`${templateDir}/.eslintrc`, 'utf8');
   eslintrc = { ...JSON.parse(eslintrc), ...eslint };
   let packageJson = await fs.promises.readFile(
-    `${templateDir}/package.json`,
-    'utf8',
+    `${templateDir}/package_json`,
+    'utf8'
   );
-
-  // Parse the contents of .eslintrc and package.json files as JSON objects
-  eslintrc = { ...JSON.parse(eslintrc), ...eslint };
   packageJson = {
     ...JSON.parse(packageJson),
     ...packageJsonDependencies,
-    name: packageName || targetDir,
+    name: packageName || targetDir
   };
 
   // If Tailwind CSS is enabled, mutate the configs for ESLint and package.json
   if (tailwindCSS) {
     mutateConfigs({ eslintrc, packageJson }, 'tailwind');
+    writeToFile(
+      `tailwind.config.js`,
+      { root, templateDir },
+      TAILWIND_CONFIG.files['tailwind.config.js']
+    );
+
+    try {
+      const file = `${root}/main.${typescript ? 'tsx' : 'jsx'}`;
+      fs.writeFileSync(
+        file,
+        `import { StrictMode } from 'react'; import { createRoot } from 'react-dom/client'; createRoot(document.getElementById('root')).render(<StrictMode><App /></StrictMode>);`
+      );
+      // file written successfully
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   // If a UI library is selected, mutate the configs for ESLint and package.json
@@ -242,24 +256,44 @@ async function init() {
   // Read the contents of all files in the template directory except .eslintrc and package.json
   const files = fs.readdirSync(templateDir);
   for (const file of files.filter(
-    (f) => !['.eslintrc', 'package.json'].includes(f),
+    (f) => !['.eslintrc', 'package.json'].includes(f)
   )) {
-    write(file, { templateDir, root });
+    writeToFile(file, { templateDir, root });
   }
 
   // Write the contents of .eslintrc and package.json files to the target directory
-  write('.eslintrc', { templateDir, root }, JSON.stringify(eslintrc, null, 2));
-  write(
+  writeToFile(
+    '.eslintrc',
+    { templateDir, root },
+    JSON.stringify(eslintrc, null, 2)
+  );
+  writeToFile(
     `package.json`,
     { templateDir, root },
-    JSON.stringify(packageJson, null, 2),
+    JSON.stringify(packageJson, null, 2)
   );
+
+  executeCliCommand(
+    'npx',
+    [
+      '--no-install',
+      'prettier',
+      '--log-level',
+      'silent',
+      '--config',
+      `${root}/.prettierrc`,
+      '--write',
+      `${root}`
+    ],
+    { cwd: root }
+  );
+  executeCliCommand('git', ['init', '--quiet'], { cwd: root });
 }
 
 // This function takes the eslintrc and packageJson objects and mutates them according to the type of feature being added
 async function mutateConfigs(
   { eslintrc, packageJson }: any,
-  type: IMutateConfig,
+  type: IMutateConfig
 ) {
   const { eslint, ...packageJsonDependencies } = MAIN_CONFIG[type];
 

@@ -1,5 +1,5 @@
 {
   "files": {
-    "tailwind.config.js": "/** @type {import('tailwindcss').Config} */module.exports = {content: [],theme: {extend: {},},plugins: []}"
+    "tailwind.config.js": "/** @type {import('tailwindcss').Config} */ \nmodule.exports = {content: [],theme: {extend: {},},plugins: []}"
   }
 }
