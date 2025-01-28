@@ -1,5 +1,7 @@
 {
   "files": {
-    "tailwind.config.js": "/** @type {import('tailwindcss').Config} */ \nmodule.exports = {content: [],theme: {extend: {},},plugins: []}"
+    "tailwind.config.js": "/** @type {import('tailwindcss').Config} */ \nmodule.exports = {content: ['./index.html','./src/**/*.{js,ts,jsx,tsx}'],theme: {extend: {},},plugins: []}",
+    "postcss.config.js": "export default {plugins: {tailwindcss: {},autoprefixer: {},},}",
+    "src/index.css": "@tailwind base;@tailwind components;@tailwind utilities;"
   }
 }

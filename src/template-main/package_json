@@ -20,6 +20,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "typecheck": "tsc --project tsconfig.json --noEmit",
+    "format": "prettier --write --no-error-on-unmatched-pattern src/**/*.{ts,tsx,js,cjs,css,md,json,scss,html} --config ./.prettierrc.json",
     "lint": "npm run lint:js && npm run lint:css",
     "lint:css": "stylelint app/**/*.js",
     "lint:eslint": "eslint --ignore-path .gitignore ",

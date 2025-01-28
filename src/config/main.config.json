@@ -1,0 +1,10 @@
+{
+  "main-ts-non-null": "!",
+  "mui-import": "import { ThemeProvider } from '@mui/material/styles';",
+  "mui-theme-import": "import theme from './theme';",
+  "mui-open-tag": "<ThemeProvider theme={theme}>",
+  "mui-close-tag": "</ThemeProvider>",
+  "react-router-import": "import { BrowserRouter as Router } from 'react-router-dom'",
+  "router-open-tag": "<Router>",
+  "router-close-tag": "</Router>"
+}

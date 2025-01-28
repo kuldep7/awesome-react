@@ -18,7 +18,16 @@ import {
 } from './helpers/main.helper';
 
 // Import the MAIN_CONFIG object which contains configuration for the project
-import MAIN_CONFIG, { TAILWIND_CONFIG } from './config';
+import PACKAGE_CONFIG, {
+  TAILWIND_CONFIG,
+  MAIN_CONFIG,
+  MUI_CONFIG,
+  TS_CONFIG
+} from './config';
+import MAIN_FILE_CONTENT from './constants/mainTemplateContent';
+import appContent from './constants/appComponent';
+
+const mainConfigRegex = new RegExp(/~~(.*?)~~/g);
 
 // Parse command-line arguments using minimist
 const argv = minimist<{
@@ -191,6 +200,8 @@ async function init() {
   // Get information about the package manager being used
   const pkgInfo = pkgFromUserAgent(process.env.npm_MAIN_CONFIG_user_agent);
   const pkgManager = pkgInfo ? pkgInfo.name : 'npm';
+  const filesToExclude = ['.eslintrc', 'package.json'];
+  let mainFileContent = MAIN_FILE_CONTENT;
 
   console.log(`${reset(`\nScaffolding project in ${root}...\n`)}`);
 
@@ -204,7 +215,7 @@ async function init() {
     template
   );
 
-  const { eslint, ...packageJsonDependencies } = MAIN_CONFIG.common;
+  const { eslint, ...packageJsonDependencies } = PACKAGE_CONFIG.common;
 
   // Read the contents of .eslintrc and package.json files in the template directory
   let eslintrc = await fs.promises.readFile(`${templateDir}/.eslintrc`, 'utf8');
@@ -219,6 +230,22 @@ async function init() {
     name: packageName || targetDir
   };
 
+  const srcDir = `${root}/src`;
+
+  if (!fs.existsSync(srcDir)) {
+    fs.mkdirSync(srcDir, { recursive: true });
+  }
+
+  fs.writeFileSync(`${root}/src/index.css`, '');
+
+  try {
+    const file = `${root}/src/App.${typescript ? 'tsx' : 'jsx'}`;
+    fs.writeFileSync(file, appContent);
+    // file written successfully
+  } catch (err) {
+    console.error(err);
+  }
+
   // If Tailwind CSS is enabled, mutate the configs for ESLint and package.json
   if (tailwindCSS) {
     mutateConfigs({ eslintrc, packageJson }, 'tailwind');
@@ -228,36 +255,79 @@ async function init() {
       TAILWIND_CONFIG.files['tailwind.config.js']
     );
 
-    try {
-      const file = `${root}/main.${typescript ? 'tsx' : 'jsx'}`;
-      fs.writeFileSync(
-        file,
-        `import { StrictMode } from 'react'; import { createRoot } from 'react-dom/client'; createRoot(document.getElementById('root')).render(<StrictMode><App /></StrictMode>);`
-      );
-      // file written successfully
-    } catch (err) {
-      console.error(err);
-    }
+    writeToFile(
+      `postcss.config.js`,
+      { root, templateDir },
+      TAILWIND_CONFIG.files['postcss.config.js']
+    );
+
+    writeToFile(
+      `src/index.css`,
+      { root, templateDir },
+      TAILWIND_CONFIG.files['src/index.css']
+    );
   }
 
   // If a UI library is selected, mutate the configs for ESLint and package.json
-  if (uiLibrary) {
+  if (uiLibrary !== 'none') {
     mutateConfigs({ eslintrc, packageJson }, 'mui');
+    mainFileContent = mainFileContent.replace(mainConfigRegex, (match) => {
+      const matchStr = match.replace(/~/g, '') as keyof typeof MAIN_CONFIG;
+      if (MUI_CONFIG.muiMainConfigs.includes(matchStr)) {
+        return MAIN_CONFIG[matchStr];
+      }
+      return match;
+    });
+
+    writeToFile(
+      `src/theme.ts`,
+      { root, templateDir },
+      `import { createTheme } from '@mui/material';\nconst theme = createTheme({});\nexport default theme;`
+    );
   }
 
   // If TypeScript is enabled, mutate the configs for ESLint and package.json
   if (typescript) {
     mutateConfigs({ eslintrc, packageJson }, 'typescript');
+    const indexHtmlPath = templateDir + '/index.html';
+    let indexHtmlContent = await fs.promises.readFile(indexHtmlPath, 'utf8');
+    indexHtmlContent = indexHtmlContent.replace('src/main.jsx', 'src/main.tsx');
+
+    mainFileContent = mainFileContent.replace('~~main-ts-non-null~~', '!');
+
+    fs.writeFileSync(`${root}/tsconfig.json`, JSON.stringify(TS_CONFIG.main));
+    fs.writeFileSync(
+      `${root}/tsconfig.app.json`,
+      JSON.stringify(TS_CONFIG.app)
+    );
+    fs.writeFileSync(
+      `${root}/tsconfig.node.json`,
+      JSON.stringify(TS_CONFIG.node)
+    );
+    fs.writeFileSync(
+      `${root}/src/vite-env.d.ts`,
+      `/// <reference types="vite/client" />`
+    );
+
+    fs.writeFileSync(`${root}/index.html`, indexHtmlContent);
+    filesToExclude.push('index.html');
   }
 
   // Get the latest versions of dependencies from npm registry
   await populateDependenciesWithLatestVersion({ packageJson });
+  // remove unused imports from the main file content
+  mainFileContent = mainFileContent.replace(mainConfigRegex, '');
+  try {
+    const file = `${root}/src/main.${typescript ? 'tsx' : 'jsx'}`;
+    fs.writeFileSync(file, mainFileContent);
+    // file written successfully
+  } catch (err) {
+    console.error(err);
+  }
 
   // Read the contents of all files in the template directory except .eslintrc and package.json
   const files = fs.readdirSync(templateDir);
-  for (const file of files.filter(
-    (f) => !['.eslintrc', 'package.json'].includes(f)
-  )) {
+  for (const file of files.filter((f) => !filesToExclude.includes(f))) {
     writeToFile(file, { templateDir, root });
   }
 
@@ -276,7 +346,7 @@ async function init() {
   executeCliCommand(
     'npx',
     [
-      '--no-install',
+      '--yes',
       'prettier',
       '--log-level',
       'silent',
@@ -295,7 +365,7 @@ async function mutateConfigs(
   { eslintrc, packageJson }: any,
   type: IMutateConfig
 ) {
-  const { eslint, ...packageJsonDependencies } = MAIN_CONFIG[type];
+  const { eslint, ...packageJsonDependencies } = PACKAGE_CONFIG[type];
 
   // add the dependencies and eslint configurations from the MAIN_CONFIG object to the respective objects
   Object.entries(packageJsonDependencies).map(([key, value]) => {

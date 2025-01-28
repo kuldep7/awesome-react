@@ -5,5 +5,11 @@
     "@emotion/styled",
     "@mui/icons-material",
     "@fontsource/roboto"
+  ],
+  "muiMainConfigs": [
+    "mui-import",
+    "mui-theme-import",
+    "mui-open-tag",
+    "mui-close-tag"
   ]
 }
