@@ -10,11 +10,13 @@ import './index.css';
 
 createRoot(document.getElementById('root')~~main-ts-non-null~~).render(
   <StrictMode>
-    ~~mui-open-tag~~
-      ~~router-open-tag~~
-        <App />
-      ~~router-close-tag~~
-    ~~mui-close-tag~~
+    ~~mui-style-engine-open-tag~~
+      ~~mui-open-tag~~
+        ~~router-open-tag~~
+          <App />
+        ~~router-close-tag~~
+      ~~mui-close-tag~~
+    ~~mui-style-engine-close-tag~~
   </StrictMode>
 );
 `;

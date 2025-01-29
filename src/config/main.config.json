@@ -1,7 +1,9 @@
 {
   "main-ts-non-null": "!",
-  "mui-import": "import { ThemeProvider } from '@mui/material/styles';",
+  "mui-import": "import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles';",
   "mui-theme-import": "import theme from './theme';",
+  "mui-style-engine-open-tag": "<StyledEngineProvider injectFirst>",
+  "mui-style-engine-close-tag": "</StyledEngineProvider>",
   "mui-open-tag": "<ThemeProvider theme={theme}>",
   "mui-close-tag": "</ThemeProvider>",
   "react-router-import": "import { BrowserRouter as Router } from 'react-router-dom'",

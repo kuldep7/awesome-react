@@ -22,7 +22,8 @@ import PACKAGE_CONFIG, {
   TAILWIND_CONFIG,
   MAIN_CONFIG,
   MUI_CONFIG,
-  TS_CONFIG
+  TS_CONFIG,
+  DEPENDENCIES_VERSIONS
 } from './config';
 import MAIN_FILE_CONTENT from './constants/mainTemplateContent';
 import appContent from './constants/appComponent';
@@ -273,7 +274,7 @@ async function init() {
     mutateConfigs({ eslintrc, packageJson }, 'mui');
     mainFileContent = mainFileContent.replace(mainConfigRegex, (match) => {
       const matchStr = match.replace(/~/g, '') as keyof typeof MAIN_CONFIG;
-      if (MUI_CONFIG.muiMainConfigs.includes(matchStr)) {
+      if (MUI_CONFIG.muiImports.includes(matchStr)) {
         return MAIN_CONFIG[matchStr];
       }
       return match;
@@ -284,6 +285,22 @@ async function init() {
       { root, templateDir },
       `import { createTheme } from '@mui/material';\nconst theme = createTheme({});\nexport default theme;`
     );
+
+    if (tailwindCSS) {
+      mainFileContent = mainFileContent.replace(mainConfigRegex, (match) => {
+        const matchStr = match.replace(/~/g, '') as keyof typeof MAIN_CONFIG;
+        if (MUI_CONFIG.muiTailwindImports.includes(matchStr)) {
+          return MAIN_CONFIG[matchStr];
+        }
+        return match;
+      });
+
+      writeToFile(
+        `tailwind.config.js`,
+        { root, templateDir },
+        MUI_CONFIG.muiTailwindConfigs
+      );
+    }
   }
 
   // If TypeScript is enabled, mutate the configs for ESLint and package.json
@@ -384,18 +401,18 @@ async function mutateConfigs(
 
 // this function takes the packageJson object from the mutateConfigs and adds the latest version of each dependency to it
 async function populateDependenciesWithLatestVersion({ packageJson }: any) {
-  const deps = [...packageJson.dependencies];
-  const devDeps = [...packageJson.devDependencies];
-  packageJson.dependencies = {};
-  packageJson.devDependencies = {};
-  for (const dep of deps) {
-    const version = await getPackageLatestVersion(dep);
-    packageJson.dependencies[dep] = `^${version}`;
-  }
-  for (const dep of devDeps) {
-    const version = await getPackageLatestVersion(dep);
-    packageJson.devDependencies[dep] = `^${version}`;
-  }
+  // const deps = [...packageJson.dependencies];
+  // const devDeps = [...packageJson.devDependencies];
+  packageJson.dependencies = DEPENDENCIES_VERSIONS.dependencies;
+  packageJson.devDependencies = DEPENDENCIES_VERSIONS.devDependencies;
+  // for (const dep of deps) {
+  //   const version = await getPackageLatestVersion(dep);
+  //   packageJson.dependencies[dep] = `^${version}`;
+  // }
+  // for (const dep of devDeps) {
+  //   const version = await getPackageLatestVersion(dep);
+  //   packageJson.devDependencies[dep] = `^${version}`;
+  // }
 }
 
 init().catch((e) => {

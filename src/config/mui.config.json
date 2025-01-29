@@ -6,10 +6,16 @@
     "@mui/icons-material",
     "@fontsource/roboto"
   ],
-  "muiMainConfigs": [
+  "muiImports": [
     "mui-import",
     "mui-theme-import",
     "mui-open-tag",
     "mui-close-tag"
-  ]
+  ],
+  "muiTailwindImports": [
+    "mui-style-engine-open-tag",
+    "mui-style-engine-close-tag"
+  ],
+
+  "muiTailwindConfigs": "/** @type {import('tailwindcss').Config} */ \nmodule.exports = {content: ['./index.html','./src/**/*.{js,ts,jsx,tsx}'],important: '#root',theme: {extend: {},},plugins: [], corePlugins: {preflight: false,},}"
 }

@@ -23,18 +23,15 @@
     "format": "prettier --write --no-error-on-unmatched-pattern src/**/*.{ts,tsx,js,cjs,css,md,json,scss,html} --config ./.prettierrc.json",
     "lint": "npm run lint:js && npm run lint:css",
     "lint:css": "stylelint app/**/*.js",
-    "lint:eslint": "eslint --ignore-path .gitignore ",
-    "lint:eslint:fix": "eslint --ignore-path .gitignore  --fix",
+    "lint:eslint": "eslint",
+    "lint:eslint:fix": "eslint --fix",
     "lint:js": "npm run lint:eslint -- . ",
     "lint:staged": "lint-staged",
-    "postinstall": "npx husky init && npx husky add .husky/pre-commit \"npx lint-staged\""
+    "postinstall": "npx husky init && echo \"npx lint-staged\" > .husky/pre-commit"
   },
   "lint-staged": {
-    "*.{js,ts,jsx,tsx,json,html,css,scss}": [
-      "prettier --write",
-      "npm run lint:eslint:fix",
-      "git add --force"
-    ]
+     "*src/**/*.{js,ts,jsx,tsx,json,html,css,scss}": "prettier --write",
+      "*src/**/*.{js,ts,jsx,tsx}": "eslint --cache --fix --report-unused-disable-directives"
   },
   "dependencies": {},
   "devDependencies": {}

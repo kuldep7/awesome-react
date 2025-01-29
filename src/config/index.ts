@@ -3,11 +3,13 @@ import MUI_CONFIG from './mui.config.json';
 import TAILWIND_CONFIG from './tailwind.config.json';
 import MAIN_CONFIG from './main.config.json';
 import TS_CONFIG from './tsconfig.config';
+import DEPENDENCIES_VERSIONS from './dependenciesVersions.config.json';
 
 export {
   PACKAGE_CONFIG as default,
   MUI_CONFIG,
   TAILWIND_CONFIG,
   MAIN_CONFIG,
-  TS_CONFIG
+  TS_CONFIG,
+  DEPENDENCIES_VERSIONS
 };
