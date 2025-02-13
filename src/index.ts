@@ -5,7 +5,6 @@ import minimist from 'minimist';
 import prompts from 'prompts';
 
 import { cyan, red, reset, yellow } from 'kolorist';
-import { getPackageLatestVersion } from './helpers/packages.helper';
 import {
   emptyDir,
   executeCliCommand,
@@ -27,6 +26,7 @@ import PACKAGE_CONFIG, {
 } from './config';
 import MAIN_FILE_CONTENT from './constants/mainTemplateContent';
 import appContent from './constants/appComponent';
+import VITE_CONFIG from './constants/viteConfig';
 
 const mainConfigRegex = new RegExp(/~~(.*?)~~/g);
 
@@ -201,7 +201,7 @@ async function init() {
   // Get information about the package manager being used
   const pkgInfo = pkgFromUserAgent(process.env.npm_MAIN_CONFIG_user_agent);
   const pkgManager = pkgInfo ? pkgInfo.name : 'npm';
-  const filesToExclude = ['.eslintrc', 'package.json'];
+  const filesToExclude = ['.eslintrc', 'package.json', 'vite.config.js'];
   let mainFileContent = MAIN_FILE_CONTENT;
 
   console.log(`${reset(`\nScaffolding project in ${root}...\n`)}`);
@@ -225,6 +225,11 @@ async function init() {
     `${templateDir}/package_json`,
     'utf8'
   );
+  let viteConfig = VITE_CONFIG;
+
+  const viteImports = [];
+  const vitePlugins = [];
+
   packageJson = {
     ...JSON.parse(packageJson),
     ...packageJsonDependencies,
@@ -250,17 +255,8 @@ async function init() {
   // If Tailwind CSS is enabled, mutate the configs for ESLint and package.json
   if (tailwindCSS) {
     mutateConfigs({ eslintrc, packageJson }, 'tailwind');
-    writeToFile(
-      `tailwind.config.js`,
-      { root, templateDir },
-      TAILWIND_CONFIG.files['tailwind.config.js']
-    );
-
-    writeToFile(
-      `postcss.config.js`,
-      { root, templateDir },
-      TAILWIND_CONFIG.files['postcss.config.js']
-    );
+    viteImports.push("import tailwindcss from '@tailwindcss/vite'");
+    vitePlugins.push('tailwindcss()');
 
     writeToFile(
       `src/index.css`,
@@ -271,35 +267,37 @@ async function init() {
 
   // If a UI library is selected, mutate the configs for ESLint and package.json
   if (uiLibrary !== 'none') {
-    mutateConfigs({ eslintrc, packageJson }, 'mui');
-    mainFileContent = mainFileContent.replace(mainConfigRegex, (match) => {
-      const matchStr = match.replace(/~/g, '') as keyof typeof MAIN_CONFIG;
-      if (MUI_CONFIG.muiImports.includes(matchStr)) {
-        return MAIN_CONFIG[matchStr];
-      }
-      return match;
-    });
-
-    writeToFile(
-      `src/theme.ts`,
-      { root, templateDir },
-      `import { createTheme } from '@mui/material';\nconst theme = createTheme({});\nexport default theme;`
-    );
-
-    if (tailwindCSS) {
+    if (uiLibrary === 'mui') {
+      mutateConfigs({ eslintrc, packageJson }, 'mui');
       mainFileContent = mainFileContent.replace(mainConfigRegex, (match) => {
         const matchStr = match.replace(/~/g, '') as keyof typeof MAIN_CONFIG;
-        if (MUI_CONFIG.muiTailwindImports.includes(matchStr)) {
+        if (MUI_CONFIG.muiImports.includes(matchStr)) {
           return MAIN_CONFIG[matchStr];
         }
         return match;
       });
 
       writeToFile(
-        `tailwind.config.js`,
+        `src/theme.ts`,
         { root, templateDir },
-        MUI_CONFIG.muiTailwindConfigs
+        `import { createTheme } from '@mui/material';\nconst theme = createTheme({});\nexport default theme;`
       );
+
+      if (tailwindCSS) {
+        mainFileContent = mainFileContent.replace(mainConfigRegex, (match) => {
+          const matchStr = match.replace(/~/g, '') as keyof typeof MAIN_CONFIG;
+          if (MUI_CONFIG.muiTailwindImports.includes(matchStr)) {
+            return MAIN_CONFIG[matchStr];
+          }
+          return match;
+        });
+
+        writeToFile(
+          'src/index.css',
+          { root, templateDir },
+          MUI_CONFIG.indexCSS
+        );
+      }
     }
   }
 
@@ -331,7 +329,7 @@ async function init() {
   }
 
   // Get the latest versions of dependencies from npm registry
-  await populateDependenciesWithLatestVersion({ packageJson });
+  await populateDependenciesWithStableVersion({ packageJson });
   // remove unused imports from the main file content
   mainFileContent = mainFileContent.replace(mainConfigRegex, '');
   try {
@@ -341,6 +339,9 @@ async function init() {
   } catch (err) {
     console.error(err);
   }
+
+  viteConfig = viteConfig.replace('~~vite-imports~~', viteImports.join('\n'));
+  viteConfig = viteConfig.replace('~~vite-plugins~~', vitePlugins.join(', '));
 
   // Read the contents of all files in the template directory except .eslintrc and package.json
   const files = fs.readdirSync(templateDir);
@@ -359,6 +360,7 @@ async function init() {
     { templateDir, root },
     JSON.stringify(packageJson, null, 2)
   );
+  writeToFile(`vite.config.js`, { templateDir, root }, viteConfig);
 
   executeCliCommand(
     'npx',
@@ -399,20 +401,25 @@ async function mutateConfigs(
   });
 }
 
+type TDependencyKeys = keyof typeof DEPENDENCIES_VERSIONS.dependencies;
+type TDevDependencyKeys = keyof typeof DEPENDENCIES_VERSIONS.devDependencies;
+
 // this function takes the packageJson object from the mutateConfigs and adds the latest version of each dependency to it
-async function populateDependenciesWithLatestVersion({ packageJson }: any) {
-  // const deps = [...packageJson.dependencies];
-  // const devDeps = [...packageJson.devDependencies];
-  packageJson.dependencies = DEPENDENCIES_VERSIONS.dependencies;
-  packageJson.devDependencies = DEPENDENCIES_VERSIONS.devDependencies;
-  // for (const dep of deps) {
-  //   const version = await getPackageLatestVersion(dep);
-  //   packageJson.dependencies[dep] = `^${version}`;
-  // }
-  // for (const dep of devDeps) {
-  //   const version = await getPackageLatestVersion(dep);
-  //   packageJson.devDependencies[dep] = `^${version}`;
-  // }
+async function populateDependenciesWithStableVersion({ packageJson }: any) {
+  const deps = [...packageJson.dependencies] as TDependencyKeys[];
+  const devDeps = [...packageJson.devDependencies] as TDevDependencyKeys[];
+
+  packageJson.dependencies = {};
+  packageJson.devDependencies = {};
+
+  for (const dep of deps) {
+    packageJson.dependencies[dep] =
+      `${DEPENDENCIES_VERSIONS.dependencies[dep]}`;
+  }
+  for (const dep of devDeps) {
+    packageJson.devDependencies[dep] =
+      `${DEPENDENCIES_VERSIONS.devDependencies[dep]}`;
+  }
 }
 
 init().catch((e) => {

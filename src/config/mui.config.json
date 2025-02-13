@@ -16,6 +16,5 @@
     "mui-style-engine-open-tag",
     "mui-style-engine-close-tag"
   ],
-
-  "muiTailwindConfigs": "/** @type {import('tailwindcss').Config} */ \nmodule.exports = {content: ['./index.html','./src/**/*.{js,ts,jsx,tsx}'],important: '#root',theme: {extend: {},},plugins: [], corePlugins: {preflight: false,},}"
+  "indexCSS": "@layer theme, base, components, utilities;\n@import 'tailwindcss/theme.css' layer(theme);\n@import 'tailwindcss/utilities.css' layer(utilities);"
 }

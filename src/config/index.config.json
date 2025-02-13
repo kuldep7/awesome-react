@@ -30,11 +30,7 @@
   "tailwind": {
     "eslint": {
       "extends": ["plugin:tailwindcss/recommended"],
-      "plugins": [
-        "tailwindcss",
-        "prettier-plugin-tailwindcss",
-        "eslint-plugin-tailwindcss"
-      ],
+      "plugins": ["tailwindcss", "prettier-plugin-tailwindcss"],
       "rules": {
         "tailwindcss/classnames-order": "warn",
         "tailwindcss/no-custom-classname": "warn",
@@ -44,10 +40,8 @@
     "dependencies": [],
     "devDependencies": [
       "tailwindcss",
-      "postcss",
-      "autoprefixer",
-      "prettier-plugin-tailwindcss",
-      "eslint-plugin-tailwindcss"
+      "@tailwindcss/vite",
+      "prettier-plugin-tailwindcss"
     ]
   },
   "typescript": {
