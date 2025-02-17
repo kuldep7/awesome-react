@@ -230,7 +230,7 @@ async function init() {
   const viteImports = [];
   const vitePlugins = [];
 
-  packageJson = {
+  const packageJsonObj = {
     ...JSON.parse(packageJson),
     ...packageJsonDependencies,
     name: packageName || targetDir
@@ -254,7 +254,7 @@ async function init() {
 
   // If Tailwind CSS is enabled, mutate the configs for ESLint and package.json
   if (tailwindCSS) {
-    mutateConfigs({ eslintrc, packageJson }, 'tailwind');
+    mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'tailwind');
     viteImports.push("import tailwindcss from '@tailwindcss/vite'");
     vitePlugins.push('tailwindcss()');
 
@@ -268,7 +268,7 @@ async function init() {
   // If a UI library is selected, mutate the configs for ESLint and package.json
   if (uiLibrary !== 'none') {
     if (uiLibrary === 'mui') {
-      mutateConfigs({ eslintrc, packageJson }, 'mui');
+      mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'mui');
       mainFileContent = mainFileContent.replace(mainConfigRegex, (match) => {
         const matchStr = match.replace(/~/g, '') as keyof typeof MAIN_CONFIG;
         if (MUI_CONFIG.muiImports.includes(matchStr)) {
@@ -303,7 +303,7 @@ async function init() {
 
   // If TypeScript is enabled, mutate the configs for ESLint and package.json
   if (typescript) {
-    mutateConfigs({ eslintrc, packageJson }, 'typescript');
+    mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'typescript');
     const indexHtmlPath = templateDir + '/index.html';
     let indexHtmlContent = await fs.promises.readFile(indexHtmlPath, 'utf8');
     indexHtmlContent = indexHtmlContent.replace('src/main.jsx', 'src/main.tsx');
@@ -324,12 +324,15 @@ async function init() {
       `/// <reference types="vite/client" />`
     );
 
+    packageJsonObj.scripts.build = 'tsc -b && vite build';
+    packageJsonObj.scripts.typecheck = 'tsc --project tsconfig.json --noEmit';
+
     fs.writeFileSync(`${root}/index.html`, indexHtmlContent);
     filesToExclude.push('index.html');
   }
 
   // Get the latest versions of dependencies from npm registry
-  await populateDependenciesWithStableVersion({ packageJson });
+  await populateDependenciesWithStableVersion({ packageJson: packageJsonObj });
   // remove unused imports from the main file content
   mainFileContent = mainFileContent.replace(mainConfigRegex, '');
   try {
@@ -358,7 +361,7 @@ async function init() {
   writeToFile(
     `package.json`,
     { templateDir, root },
-    JSON.stringify(packageJson, null, 2)
+    JSON.stringify(packageJsonObj, null, 2)
   );
   writeToFile(`vite.config.js`, { templateDir, root }, viteConfig);
 
