@@ -10,7 +10,10 @@
       "vite",
       "@vitejs/plugin-react",
       "lint-staged",
-      "husky"
+      "husky",
+      "stylelint",
+      "stylelint-config-standard-scss",
+      "vitest"
     ],
     "eslint": {
       "extends": [

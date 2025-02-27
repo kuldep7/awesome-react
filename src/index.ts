@@ -22,7 +22,8 @@ import PACKAGE_CONFIG, {
   MAIN_CONFIG,
   MUI_CONFIG,
   TS_CONFIG,
-  DEPENDENCIES_VERSIONS
+  DEPENDENCIES_VERSIONS,
+  PACKAGE_SCRIPTS
 } from './config';
 import MAIN_FILE_CONTENT from './constants/mainTemplateContent';
 import appContent from './constants/appComponent';
@@ -186,7 +187,13 @@ async function init() {
     return;
   }
 
-  const { overwrite, packageName, tailwindCSS, typescript, uiLibrary } = result;
+  const {
+    overwrite,
+    packageName,
+    tailwindCSS: isTailwindSelected,
+    typescript: isTypescriptSelected,
+    uiLibrary
+  } = result;
 
   // Get the absolute path of the target directory
   const root = path.join(cwd, targetDir);
@@ -207,7 +214,7 @@ async function init() {
   console.log(`${reset(`\nScaffolding project in ${root}...\n`)}`);
 
   // Define the template directory based on whether TypeScript is enabled
-  const template = typescript ? 'template-main' : 'template-main';
+  const template = isTypescriptSelected ? 'template-main' : 'template-main';
 
   // Get the absolute path of the template directory
   const templateDir = path.resolve(
@@ -245,7 +252,7 @@ async function init() {
   fs.writeFileSync(`${root}/src/index.css`, '');
 
   try {
-    const file = `${root}/src/App.${typescript ? 'tsx' : 'jsx'}`;
+    const file = `${root}/src/App.${isTypescriptSelected ? 'tsx' : 'jsx'}`;
     fs.writeFileSync(file, appContent);
     // file written successfully
   } catch (err) {
@@ -253,7 +260,7 @@ async function init() {
   }
 
   // If Tailwind CSS is enabled, mutate the configs for ESLint and package.json
-  if (tailwindCSS) {
+  if (isTailwindSelected) {
     mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'tailwind');
     viteImports.push("import tailwindcss from '@tailwindcss/vite'");
     vitePlugins.push('tailwindcss()');
@@ -274,6 +281,14 @@ async function init() {
         if (MUI_CONFIG.muiImports.includes(matchStr)) {
           return MAIN_CONFIG[matchStr];
         }
+
+        if (
+          isTailwindSelected &&
+          MUI_CONFIG.muiTailwindImports.includes(matchStr)
+        ) {
+          return MAIN_CONFIG[matchStr];
+        }
+
         return match;
       });
 
@@ -283,15 +298,7 @@ async function init() {
         `import { createTheme } from '@mui/material';\nconst theme = createTheme({});\nexport default theme;`
       );
 
-      if (tailwindCSS) {
-        mainFileContent = mainFileContent.replace(mainConfigRegex, (match) => {
-          const matchStr = match.replace(/~/g, '') as keyof typeof MAIN_CONFIG;
-          if (MUI_CONFIG.muiTailwindImports.includes(matchStr)) {
-            return MAIN_CONFIG[matchStr];
-          }
-          return match;
-        });
-
+      if (isTailwindSelected) {
         writeToFile(
           'src/index.css',
           { root, templateDir },
@@ -302,7 +309,7 @@ async function init() {
   }
 
   // If TypeScript is enabled, mutate the configs for ESLint and package.json
-  if (typescript) {
+  if (isTypescriptSelected) {
     mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'typescript');
     const indexHtmlPath = templateDir + '/index.html';
     let indexHtmlContent = await fs.promises.readFile(indexHtmlPath, 'utf8');
@@ -324,8 +331,8 @@ async function init() {
       `/// <reference types="vite/client" />`
     );
 
-    packageJsonObj.scripts.build = 'tsc -b && vite build';
-    packageJsonObj.scripts.typecheck = 'tsc --project tsconfig.json --noEmit';
+    packageJsonObj.scripts.build = PACKAGE_SCRIPTS['typescript-build'];
+    packageJsonObj.scripts.typecheck = PACKAGE_SCRIPTS.typecheck;
 
     fs.writeFileSync(`${root}/index.html`, indexHtmlContent);
     filesToExclude.push('index.html');
@@ -336,7 +343,7 @@ async function init() {
   // remove unused imports from the main file content
   mainFileContent = mainFileContent.replace(mainConfigRegex, '');
   try {
-    const file = `${root}/src/main.${typescript ? 'tsx' : 'jsx'}`;
+    const file = `${root}/src/main.${isTypescriptSelected ? 'tsx' : 'jsx'}`;
     fs.writeFileSync(file, mainFileContent);
     // file written successfully
   } catch (err) {

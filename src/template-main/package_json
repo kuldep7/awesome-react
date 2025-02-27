@@ -21,7 +21,7 @@
     "test:ui": "vitest --ui",
     "format": "prettier --write --no-error-on-unmatched-pattern src/**/*.{ts,tsx,js,cjs,css,md,json,scss,html} --config ./.prettierrc.json",
     "lint": "npm run lint:js && npm run lint:css",
-    "lint:css": "stylelint app/**/*.js",
+    "lint:css": "stylelint **/*.css",
     "lint:eslint": "eslint",
     "lint:eslint:fix": "eslint --fix",
     "lint:js": "npm run lint:eslint -- . ",
