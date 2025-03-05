@@ -6,6 +6,7 @@ const VITE_CONFIG = `
   // https://vitejs.dev/config/
   export default defineConfig({
     plugins: [react(), ~~vite-plugins~~],
+    ~~vite-resolve-alias~~
   });
 `;
 

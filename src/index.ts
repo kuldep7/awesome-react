@@ -9,6 +9,8 @@ import {
   emptyDir,
   executeCliCommand,
   formatTargetDir,
+  generateJsTsConfigAlias,
+  generateViteConfigAlias,
   isEmpty,
   isValidPackageName,
   pkgFromUserAgent,
@@ -23,7 +25,8 @@ import PACKAGE_CONFIG, {
   MUI_CONFIG,
   TS_CONFIG,
   DEPENDENCIES_VERSIONS,
-  PACKAGE_SCRIPTS
+  PACKAGE_SCRIPTS,
+  ALIASES
 } from './config';
 import MAIN_FILE_CONTENT from './constants/mainTemplateContent';
 import appContent from './constants/appComponent';
@@ -312,16 +315,20 @@ async function init() {
   if (isTypescriptSelected) {
     mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'typescript');
     const indexHtmlPath = templateDir + '/index.html';
+    const tsConfig = { ...TS_CONFIG.app };
+    const tsConfigAliases = generateJsTsConfigAlias(ALIASES);
+    tsConfig.compilerOptions.paths = {
+      ...tsConfig.compilerOptions.paths,
+      ...tsConfigAliases
+    };
+
     let indexHtmlContent = await fs.promises.readFile(indexHtmlPath, 'utf8');
     indexHtmlContent = indexHtmlContent.replace('src/main.jsx', 'src/main.tsx');
 
     mainFileContent = mainFileContent.replace('~~main-ts-non-null~~', '!');
 
     fs.writeFileSync(`${root}/tsconfig.json`, JSON.stringify(TS_CONFIG.main));
-    fs.writeFileSync(
-      `${root}/tsconfig.app.json`,
-      JSON.stringify(TS_CONFIG.app)
-    );
+    fs.writeFileSync(`${root}/tsconfig.app.json`, JSON.stringify(tsConfig));
     fs.writeFileSync(
       `${root}/tsconfig.node.json`,
       JSON.stringify(TS_CONFIG.node)
@@ -336,6 +343,13 @@ async function init() {
 
     fs.writeFileSync(`${root}/index.html`, indexHtmlContent);
     filesToExclude.push('index.html');
+  } else {
+    const jsConfig: JsConfig = {};
+    const jsConfigAliases = generateJsTsConfigAlias(ALIASES);
+    jsConfig.compilerOptions = {
+      paths: { ...jsConfigAliases }
+    };
+    fs.writeFileSync(`${root}/jsconfig.json`, JSON.stringify(jsConfig));
   }
 
   // Get the latest versions of dependencies from npm registry
@@ -350,8 +364,24 @@ async function init() {
     console.error(err);
   }
 
-  viteConfig = viteConfig.replace('~~vite-imports~~', viteImports.join('\n'));
-  viteConfig = viteConfig.replace('~~vite-plugins~~', vitePlugins.join(', '));
+  (function () {
+    viteImports.push("import path from 'path'");
+    const viteAliases = generateViteConfigAlias(ALIASES);
+    const viteAliasStr = `resolve: {
+      alias: {
+        ${viteAliases}
+      }
+    }`;
+    const viteConfigInserts = {
+      '~~vite-imports~~': viteImports.join('\n'),
+      '~~vite-plugins~~': vitePlugins.join(', '),
+      '~~vite-resolve-alias~~': viteAliasStr
+    };
+
+    for (const [key, value] of Object.entries(viteConfigInserts)) {
+      viteConfig = viteConfig.replace(key, value);
+    }
+  })();
 
   // Read the contents of all files in the template directory except .eslintrc and package.json
   const files = fs.readdirSync(templateDir);

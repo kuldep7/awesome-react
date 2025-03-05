@@ -5,6 +5,7 @@ import MAIN_CONFIG from './main.config.json';
 import TS_CONFIG from './tsconfig.config';
 import DEPENDENCIES_VERSIONS from './dependenciesVersions.config.json';
 import PACKAGE_SCRIPTS from './packageScripts.json';
+import ALIASES from './alias.config.json';
 
 export {
   PACKAGE_CONFIG as default,
@@ -13,5 +14,6 @@ export {
   MAIN_CONFIG,
   TS_CONFIG,
   DEPENDENCIES_VERSIONS,
-  PACKAGE_SCRIPTS
+  PACKAGE_SCRIPTS,
+  ALIASES
 };

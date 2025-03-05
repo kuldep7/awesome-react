@@ -100,6 +100,26 @@ function executeCliCommand(
   });
 }
 
+function generateViteConfigAlias(aliases: Record<string, string>) {
+  let aliasStr = '';
+
+  for (const [key, value] of Object.entries(aliases)) {
+    aliasStr += `  \v"${key}": path.resolve(__dirname, './${value}'),\n`;
+  }
+
+  return aliasStr;
+}
+
+function generateJsTsConfigAlias(aliases: Record<string, string>) {
+  const aliasObj: Record<string, string[]> = {};
+
+  for (const [key, value] of Object.entries(aliases)) {
+    aliasObj[`${key}/*`] = [`./${value}/*`];
+  }
+
+  return aliasObj;
+}
+
 export {
   isValidPackageName,
   toValidPackageName,
@@ -109,5 +129,7 @@ export {
   emptyDir,
   copy,
   writeToFile,
-  executeCliCommand
+  executeCliCommand,
+  generateViteConfigAlias,
+  generateJsTsConfigAlias
 };

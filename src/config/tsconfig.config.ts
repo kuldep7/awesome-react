@@ -28,7 +28,8 @@ const tsConfig = {
       noUnusedLocals: true,
       noUnusedParameters: true,
       noFallthroughCasesInSwitch: true,
-      noUncheckedSideEffectImports: true
+      noUncheckedSideEffectImports: true,
+      paths: []
     },
     include: ['src']
   },
