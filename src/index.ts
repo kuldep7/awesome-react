@@ -390,18 +390,20 @@ async function init() {
     writeToFile(file, { templateDir, root });
   }
 
-  // Write the contents of .eslintrc and package.json files to the target directory
-  writeToFile(
-    '.eslintrc',
-    { templateDir, root },
-    JSON.stringify(eslintrc, null, 2)
-  );
-  writeToFile(
-    `package.json`,
-    { templateDir, root },
-    JSON.stringify(packageJsonObj, null, 2)
-  );
-  writeToFile(`vite.config.js`, { templateDir, root }, viteConfig);
+  // Define the files to be written and their contents
+  const filesToWrite = [
+    { filename: '.eslintrc', content: JSON.stringify(eslintrc, null, 2) },
+    {
+      filename: 'package.json',
+      content: JSON.stringify(packageJsonObj, null, 2)
+    },
+    { filename: 'vite.config.js', content: viteConfig }
+  ];
+
+  // Write the contents of the files to the target directory
+  for (const file of filesToWrite) {
+    writeToFile(file.filename, { templateDir, root }, file.content);
+  }
 
   executeCliCommand(
     'npx',
