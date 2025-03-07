@@ -119,6 +119,24 @@ function generateJsTsConfigAlias(aliases: Record<string, string>) {
 
   return aliasObj;
 }
+const placeholderRegex = new RegExp(/~~(.*?)~~/g);
+
+function updateConfigPlaceholders(
+  content: string,
+  placeholdersMap: Record<string, string>
+) {
+  let updatedContent = content;
+  updatedContent = updatedContent.replace(placeholderRegex, (match) => {
+    const key = match.replace(/~/g, '') as keyof typeof placeholdersMap;
+
+    return placeholdersMap[key] ?? match;
+  });
+  return updatedContent;
+}
+
+function cleanUnusedPlaceholders(content: string) {
+  return content.replace(placeholderRegex, '');
+}
 
 export {
   isValidPackageName,
@@ -131,5 +149,7 @@ export {
   writeToFile,
   executeCliCommand,
   generateViteConfigAlias,
-  generateJsTsConfigAlias
+  generateJsTsConfigAlias,
+  updateConfigPlaceholders,
+  cleanUnusedPlaceholders
 };

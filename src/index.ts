@@ -6,6 +6,7 @@ import prompts from 'prompts';
 
 import { cyan, red, reset, yellow } from 'kolorist';
 import {
+  cleanUnusedPlaceholders,
   emptyDir,
   executeCliCommand,
   formatTargetDir,
@@ -15,6 +16,7 @@ import {
   isValidPackageName,
   pkgFromUserAgent,
   toValidPackageName,
+  updateConfigPlaceholders,
   writeToFile
 } from './helpers/main.helper';
 
@@ -279,22 +281,26 @@ async function init() {
   if (uiLibrary !== 'none') {
     if (uiLibrary === 'mui') {
       mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'mui');
-      mainFileContent = mainFileContent.replace(mainConfigRegex, (match) => {
-        const matchStr = match.replace(/~/g, '') as keyof typeof MAIN_CONFIG;
-        if (MUI_CONFIG.muiImports.includes(matchStr)) {
-          return MAIN_CONFIG[matchStr];
+      const mainFilePHMap: Record<string, string> = {};
+      MUI_CONFIG.muiImports.forEach((key) => {
+        const value = MAIN_CONFIG[key as keyof typeof MAIN_CONFIG];
+        if (value) {
+          mainFilePHMap[key] = value;
         }
-
-        if (
-          isTailwindSelected &&
-          MUI_CONFIG.muiTailwindImports.includes(matchStr)
-        ) {
-          return MAIN_CONFIG[matchStr];
-        }
-
-        return match;
       });
 
+      if (isTailwindSelected) {
+        MUI_CONFIG.muiTailwindImports.forEach((key) => {
+          const value = MAIN_CONFIG[key as keyof typeof MAIN_CONFIG];
+          if (value) {
+            mainFilePHMap[key] = value;
+          }
+        });
+      }
+      mainFileContent = updateConfigPlaceholders(
+        mainFileContent,
+        mainFilePHMap
+      );
       writeToFile(
         `src/theme.ts`,
         { root, templateDir },
@@ -354,8 +360,9 @@ async function init() {
 
   // Get the latest versions of dependencies from npm registry
   await populateDependenciesWithStableVersion({ packageJson: packageJsonObj });
-  // remove unused imports from the main file content
-  mainFileContent = mainFileContent.replace(mainConfigRegex, '');
+
+  mainFileContent = cleanUnusedPlaceholders(mainFileContent);
+
   try {
     const file = `${root}/src/main.${isTypescriptSelected ? 'tsx' : 'jsx'}`;
     fs.writeFileSync(file, mainFileContent);
@@ -364,25 +371,19 @@ async function init() {
     console.error(err);
   }
 
-  (function () {
-    viteImports.push("import path from 'path'");
-    const viteAliases = generateViteConfigAlias(ALIASES);
-    const viteAliasStr = `resolve: {
+  viteImports.push("import path from 'path'");
+  const viteAliases = generateViteConfigAlias(ALIASES);
+  const viteAliasStr = `resolve: {
       alias: {
         ${viteAliases}
       }
     }`;
-    const viteConfigInserts = {
-      '~~vite-imports~~': viteImports.join('\n'),
-      '~~vite-plugins~~': vitePlugins.join(', '),
-      '~~vite-resolve-alias~~': viteAliasStr
-    };
-
-    for (const [key, value] of Object.entries(viteConfigInserts)) {
-      viteConfig = viteConfig.replace(key, value);
-    }
-  })();
-
+  const viteConfigPlaceholderMap = {
+    'vite-imports': viteImports.join('\n'),
+    'vite-plugins': vitePlugins.join(', '),
+    'vite-resolve-alias': viteAliasStr
+  };
+  viteConfig = updateConfigPlaceholders(viteConfig, viteConfigPlaceholderMap);
   // Read the contents of all files in the template directory except .eslintrc and package.json
   const files = fs.readdirSync(templateDir);
   for (const file of files.filter((f) => !filesToExclude.includes(f))) {
