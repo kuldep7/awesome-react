@@ -5,20 +5,36 @@ import minimist from 'minimist';
 import prompts from 'prompts';
 
 import { cyan, red, reset, yellow } from 'kolorist';
-import { getPackageLatestVersion } from './helpers/packages.helper';
 import {
+  cleanUnusedPlaceholders,
   emptyDir,
   executeCliCommand,
   formatTargetDir,
+  generateJsTsConfigAlias,
+  generateViteConfigAlias,
   isEmpty,
   isValidPackageName,
   pkgFromUserAgent,
   toValidPackageName,
+  updateConfigPlaceholders,
   writeToFile
 } from './helpers/main.helper';
 
 // Import the MAIN_CONFIG object which contains configuration for the project
-import MAIN_CONFIG, { TAILWIND_CONFIG } from './config';
+import PACKAGE_CONFIG, {
+  TAILWIND_CONFIG,
+  MAIN_CONFIG,
+  MUI_CONFIG,
+  TS_CONFIG,
+  DEPENDENCIES_VERSIONS,
+  PACKAGE_SCRIPTS,
+  ALIASES
+} from './config';
+import MAIN_FILE_CONTENT from './constants/mainTemplateContent';
+import appContent from './constants/appComponent';
+import VITE_CONFIG from './constants/viteConfig';
+
+const mainConfigRegex = new RegExp(/~~(.*?)~~/g);
 
 // Parse command-line arguments using minimist
 const argv = minimist<{
@@ -176,7 +192,13 @@ async function init() {
     return;
   }
 
-  const { overwrite, packageName, tailwindCSS, typescript, uiLibrary } = result;
+  const {
+    overwrite,
+    packageName,
+    tailwindCSS: isTailwindSelected,
+    typescript: isTypescriptSelected,
+    uiLibrary
+  } = result;
 
   // Get the absolute path of the target directory
   const root = path.join(cwd, targetDir);
@@ -191,11 +213,13 @@ async function init() {
   // Get information about the package manager being used
   const pkgInfo = pkgFromUserAgent(process.env.npm_MAIN_CONFIG_user_agent);
   const pkgManager = pkgInfo ? pkgInfo.name : 'npm';
+  const filesToExclude = ['.eslintrc', 'package.json', 'vite.config.js'];
+  let mainFileContent = MAIN_FILE_CONTENT;
 
   console.log(`${reset(`\nScaffolding project in ${root}...\n`)}`);
 
   // Define the template directory based on whether TypeScript is enabled
-  const template = typescript ? 'template-main' : 'template-main';
+  const template = isTypescriptSelected ? 'template-main' : 'template-main';
 
   // Get the absolute path of the template directory
   const templateDir = path.resolve(
@@ -204,7 +228,7 @@ async function init() {
     template
   );
 
-  const { eslint, ...packageJsonDependencies } = MAIN_CONFIG.common;
+  const { eslint, ...packageJsonDependencies } = PACKAGE_CONFIG.common;
 
   // Read the contents of .eslintrc and package.json files in the template directory
   let eslintrc = await fs.promises.readFile(`${templateDir}/.eslintrc`, 'utf8');
@@ -213,70 +237,178 @@ async function init() {
     `${templateDir}/package_json`,
     'utf8'
   );
-  packageJson = {
+  let viteConfig = VITE_CONFIG;
+
+  const viteImports = [];
+  const vitePlugins = [];
+
+  const packageJsonObj = {
     ...JSON.parse(packageJson),
     ...packageJsonDependencies,
     name: packageName || targetDir
   };
 
-  // If Tailwind CSS is enabled, mutate the configs for ESLint and package.json
-  if (tailwindCSS) {
-    mutateConfigs({ eslintrc, packageJson }, 'tailwind');
-    writeToFile(
-      `tailwind.config.js`,
-      { root, templateDir },
-      TAILWIND_CONFIG.files['tailwind.config.js']
-    );
+  const srcDir = `${root}/src`;
 
-    try {
-      const file = `${root}/main.${typescript ? 'tsx' : 'jsx'}`;
-      fs.writeFileSync(
-        file,
-        `import { StrictMode } from 'react'; import { createRoot } from 'react-dom/client'; createRoot(document.getElementById('root')).render(<StrictMode><App /></StrictMode>);`
-      );
-      // file written successfully
-    } catch (err) {
-      console.error(err);
-    }
+  if (!fs.existsSync(srcDir)) {
+    fs.mkdirSync(srcDir, { recursive: true });
+  }
+
+  fs.writeFileSync(`${root}/src/index.css`, '');
+
+  try {
+    const file = `${root}/src/App.${isTypescriptSelected ? 'tsx' : 'jsx'}`;
+    fs.writeFileSync(file, appContent);
+    // file written successfully
+  } catch (err) {
+    console.error(err);
+  }
+
+  // If Tailwind CSS is enabled, mutate the configs for ESLint and package.json
+  if (isTailwindSelected) {
+    mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'tailwind');
+    viteImports.push("import tailwindcss from '@tailwindcss/vite'");
+    vitePlugins.push('tailwindcss()');
+
+    writeToFile(
+      `src/index.css`,
+      { root, templateDir },
+      TAILWIND_CONFIG.files['src/index.css']
+    );
   }
 
   // If a UI library is selected, mutate the configs for ESLint and package.json
-  if (uiLibrary) {
-    mutateConfigs({ eslintrc, packageJson }, 'mui');
+  if (uiLibrary !== 'none') {
+    if (uiLibrary === 'mui') {
+      mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'mui');
+      const mainFilePHMap: Record<string, string> = {};
+      MUI_CONFIG.muiImports.forEach((key) => {
+        const value = MAIN_CONFIG[key as keyof typeof MAIN_CONFIG];
+        if (value) {
+          mainFilePHMap[key] = value;
+        }
+      });
+
+      if (isTailwindSelected) {
+        MUI_CONFIG.muiTailwindImports.forEach((key) => {
+          const value = MAIN_CONFIG[key as keyof typeof MAIN_CONFIG];
+          if (value) {
+            mainFilePHMap[key] = value;
+          }
+        });
+      }
+      mainFileContent = updateConfigPlaceholders(
+        mainFileContent,
+        mainFilePHMap
+      );
+      writeToFile(
+        `src/theme.ts`,
+        { root, templateDir },
+        `import { createTheme } from '@mui/material';\nconst theme = createTheme({});\nexport default theme;`
+      );
+
+      if (isTailwindSelected) {
+        writeToFile(
+          'src/index.css',
+          { root, templateDir },
+          MUI_CONFIG.indexCSS
+        );
+      }
+    }
   }
 
   // If TypeScript is enabled, mutate the configs for ESLint and package.json
-  if (typescript) {
-    mutateConfigs({ eslintrc, packageJson }, 'typescript');
+  if (isTypescriptSelected) {
+    mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'typescript');
+    const indexHtmlPath = templateDir + '/index.html';
+    const tsConfig = { ...TS_CONFIG.app };
+    const tsConfigAliases = generateJsTsConfigAlias(ALIASES);
+    tsConfig.compilerOptions.paths = {
+      ...tsConfig.compilerOptions.paths,
+      ...tsConfigAliases
+    };
+
+    let indexHtmlContent = await fs.promises.readFile(indexHtmlPath, 'utf8');
+    indexHtmlContent = indexHtmlContent.replace('src/main.jsx', 'src/main.tsx');
+
+    mainFileContent = mainFileContent.replace('~~main-ts-non-null~~', '!');
+
+    fs.writeFileSync(`${root}/tsconfig.json`, JSON.stringify(TS_CONFIG.main));
+    fs.writeFileSync(`${root}/tsconfig.app.json`, JSON.stringify(tsConfig));
+    fs.writeFileSync(
+      `${root}/tsconfig.node.json`,
+      JSON.stringify(TS_CONFIG.node)
+    );
+    fs.writeFileSync(
+      `${root}/src/vite-env.d.ts`,
+      `/// <reference types="vite/client" />`
+    );
+
+    packageJsonObj.scripts.build = PACKAGE_SCRIPTS['typescript-build'];
+    packageJsonObj.scripts.typecheck = PACKAGE_SCRIPTS.typecheck;
+
+    fs.writeFileSync(`${root}/index.html`, indexHtmlContent);
+    filesToExclude.push('index.html');
+  } else {
+    const jsConfig: JsConfig = {};
+    const jsConfigAliases = generateJsTsConfigAlias(ALIASES);
+    jsConfig.compilerOptions = {
+      paths: { ...jsConfigAliases }
+    };
+    fs.writeFileSync(`${root}/jsconfig.json`, JSON.stringify(jsConfig));
   }
 
   // Get the latest versions of dependencies from npm registry
-  await populateDependenciesWithLatestVersion({ packageJson });
+  await populateDependenciesWithStableVersion({ packageJson: packageJsonObj });
 
+  mainFileContent = cleanUnusedPlaceholders(mainFileContent);
+
+  try {
+    const file = `${root}/src/main.${isTypescriptSelected ? 'tsx' : 'jsx'}`;
+    fs.writeFileSync(file, mainFileContent);
+    // file written successfully
+  } catch (err) {
+    console.error(err);
+  }
+
+  viteImports.push("import path from 'path'");
+  const viteAliases = generateViteConfigAlias(ALIASES);
+  const viteAliasStr = `resolve: {
+      alias: {
+        ${viteAliases}
+      }
+    }`;
+  const viteConfigPlaceholderMap = {
+    'vite-imports': viteImports.join('\n'),
+    'vite-plugins': vitePlugins.join(', '),
+    'vite-resolve-alias': viteAliasStr
+  };
+  viteConfig = updateConfigPlaceholders(viteConfig, viteConfigPlaceholderMap);
   // Read the contents of all files in the template directory except .eslintrc and package.json
   const files = fs.readdirSync(templateDir);
-  for (const file of files.filter(
-    (f) => !['.eslintrc', 'package.json'].includes(f)
-  )) {
+  for (const file of files.filter((f) => !filesToExclude.includes(f))) {
     writeToFile(file, { templateDir, root });
   }
 
-  // Write the contents of .eslintrc and package.json files to the target directory
-  writeToFile(
-    '.eslintrc',
-    { templateDir, root },
-    JSON.stringify(eslintrc, null, 2)
-  );
-  writeToFile(
-    `package.json`,
-    { templateDir, root },
-    JSON.stringify(packageJson, null, 2)
-  );
+  // Define the files to be written and their contents
+  const filesToWrite = [
+    { filename: '.eslintrc', content: JSON.stringify(eslintrc, null, 2) },
+    {
+      filename: 'package.json',
+      content: JSON.stringify(packageJsonObj, null, 2)
+    },
+    { filename: 'vite.config.js', content: viteConfig }
+  ];
+
+  // Write the contents of the files to the target directory
+  for (const file of filesToWrite) {
+    writeToFile(file.filename, { templateDir, root }, file.content);
+  }
 
   executeCliCommand(
     'npx',
     [
-      '--no-install',
+      '--yes',
       'prettier',
       '--log-level',
       'silent',
@@ -295,7 +427,7 @@ async function mutateConfigs(
   { eslintrc, packageJson }: any,
   type: IMutateConfig
 ) {
-  const { eslint, ...packageJsonDependencies } = MAIN_CONFIG[type];
+  const { eslint, ...packageJsonDependencies } = PACKAGE_CONFIG[type];
 
   // add the dependencies and eslint configurations from the MAIN_CONFIG object to the respective objects
   Object.entries(packageJsonDependencies).map(([key, value]) => {
@@ -312,19 +444,24 @@ async function mutateConfigs(
   });
 }
 
+type TDependencyKeys = keyof typeof DEPENDENCIES_VERSIONS.dependencies;
+type TDevDependencyKeys = keyof typeof DEPENDENCIES_VERSIONS.devDependencies;
+
 // this function takes the packageJson object from the mutateConfigs and adds the latest version of each dependency to it
-async function populateDependenciesWithLatestVersion({ packageJson }: any) {
-  const deps = [...packageJson.dependencies];
-  const devDeps = [...packageJson.devDependencies];
+async function populateDependenciesWithStableVersion({ packageJson }: any) {
+  const deps = [...packageJson.dependencies] as TDependencyKeys[];
+  const devDeps = [...packageJson.devDependencies] as TDevDependencyKeys[];
+
   packageJson.dependencies = {};
   packageJson.devDependencies = {};
+
   for (const dep of deps) {
-    const version = await getPackageLatestVersion(dep);
-    packageJson.dependencies[dep] = `^${version}`;
+    packageJson.dependencies[dep] =
+      `${DEPENDENCIES_VERSIONS.dependencies[dep]}`;
   }
   for (const dep of devDeps) {
-    const version = await getPackageLatestVersion(dep);
-    packageJson.devDependencies[dep] = `^${version}`;
+    packageJson.devDependencies[dep] =
+      `${DEPENDENCIES_VERSIONS.devDependencies[dep]}`;
   }
 }
 

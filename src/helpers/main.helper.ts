@@ -100,6 +100,44 @@ function executeCliCommand(
   });
 }
 
+function generateViteConfigAlias(aliases: Record<string, string>) {
+  let aliasStr = '';
+
+  for (const [key, value] of Object.entries(aliases)) {
+    aliasStr += `  \v"${key}": path.resolve(__dirname, './${value}'),\n`;
+  }
+
+  return aliasStr;
+}
+
+function generateJsTsConfigAlias(aliases: Record<string, string>) {
+  const aliasObj: Record<string, string[]> = {};
+
+  for (const [key, value] of Object.entries(aliases)) {
+    aliasObj[`${key}/*`] = [`./${value}/*`];
+  }
+
+  return aliasObj;
+}
+const placeholderRegex = new RegExp(/~~(.*?)~~/g);
+
+function updateConfigPlaceholders(
+  content: string,
+  placeholdersMap: Record<string, string>
+) {
+  let updatedContent = content;
+  updatedContent = updatedContent.replace(placeholderRegex, (match) => {
+    const key = match.replace(/~/g, '') as keyof typeof placeholdersMap;
+
+    return placeholdersMap[key] ?? match;
+  });
+  return updatedContent;
+}
+
+function cleanUnusedPlaceholders(content: string) {
+  return content.replace(placeholderRegex, '');
+}
+
 export {
   isValidPackageName,
   toValidPackageName,
@@ -109,5 +147,9 @@ export {
   emptyDir,
   copy,
   writeToFile,
-  executeCliCommand
+  executeCliCommand,
+  generateViteConfigAlias,
+  generateJsTsConfigAlias,
+  updateConfigPlaceholders,
+  cleanUnusedPlaceholders
 };
