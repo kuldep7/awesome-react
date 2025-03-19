@@ -44,10 +44,10 @@
     "lint-staged": "^15.2.9",
     "minimist": "^1.2.8",
     "prettier": "^3.3.3",
-    "prompts": "^2.4.2",
-    "unbuild": "^2.0.0"
+    "prompts": "^2.4.2"
   },
   "dependencies": {
-    "fs-extra": "^11.3.0"
+    "fs-extra": "^11.3.0",
+    "unbuild": "^2.0.0"
   }
 }
