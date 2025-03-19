@@ -19,7 +19,7 @@
     "prepublishOnly": "npm run build",
     "lint:fix": "eslint --fix",
     "lint:staged": "lint-staged",
-    "postinstall": "npx husky init && echo \"npm run lint:staged $1\" > .husky/pre-commit",
+    "postinstall": "npm run build",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -34,6 +34,7 @@
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
+    "@types/fs-extra": "^11.0.4",
     "@types/minimist": "^1.2.5",
     "@types/prompts": "^2.4.9",
     "cross-spawn": "^7.0.3",
@@ -45,5 +46,8 @@
     "prettier": "^3.3.3",
     "prompts": "^2.4.2",
     "unbuild": "^2.0.0"
+  },
+  "dependencies": {
+    "fs-extra": "^11.3.0"
   }
 }
