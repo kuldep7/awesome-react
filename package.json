@@ -5,7 +5,7 @@
   "license": "ISC",
   "description": "",
   "bin": {
-    "create-app": "index.mjs"
+    "create-app": "./dist/index.mjs"
   },
   "files": [
     "index.mjs",
@@ -19,7 +19,6 @@
     "prepublishOnly": "npm run build",
     "lint:fix": "eslint --fix",
     "lint:staged": "lint-staged",
-    "postinstall": "npm run build",
     "prepare": "husky"
   },
   "lint-staged": {
