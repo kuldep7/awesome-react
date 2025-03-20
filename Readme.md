@@ -1,41 +1,44 @@
 # Awesome React CLI
 
-A lightweight, modern CLI tool to scaffold React projects quickly and efficiently. Built with simplicity in mind, `@kuldep7/awesome-react` helps developers kickstart React applications with pre-configured templates. Hosted on GitHub Packages for seamless integration with the GitHub ecosystem.
+A lightweight, modern CLI tool to scaffold React projects quickly and efficiently. Built with simplicity in mind, ```@kuldep7/awesome-react``` helps developers kickstart React applications with pre-configured templates. Hosted on GitHub Packages for seamless integration with the GitHub ecosystem.
 
 ## Features
 
 - **Quick Setup**: Generate a React project with a single command.
-- **Customizable Templates**: Includes a `template-main` starter (expandable in future releases).
-- **Modern Tooling**: Leverages ES Modules and dependencies like `prompts` for an interactive experience.
-- **Cross-Platform**: Works on macOS, Linux, and Windows via `cross-spawn`.
+- **Customizable Templates**: Includes a ```template-main``` starter (expandable in future releases).
+- **Modern Tooling**: Leverages ES Modules and dependencies like ```prompts``` for an interactive experience.
+- **Cross-Platform**: Works on macOS, Linux, and Windows via ```cross-spawn```.
 
-## Prerequisites - **Node.js**: Version 20 or higher.
+## Prerequisites
+- **Node.js**: Version 20 or higher.
 
-- **npm**: Version 8 or higher (bundled with Node.js). ## Installation `@kuldep7/awesome-react` is published to GitHub Packages. Follow these steps to install it globally:
+- **npm**: Version 8 or higher (bundled with Node.js). 
+## Installation 
+```@kuldep7/awesome-react``` is published to GitHub Packages. Follow these steps to install it globally:
 
 ### Step-by-Step
 
-1. **Configure npm for GitHub Packages** Set the registry for the `@kuldep7` scope: `` npm config set @kuldep7:registry https://npm.pkg.github.com/`
+1. **Configure npm for GitHub Packages** Set the registry for the ```@kuldep7``` <br/> ``` npm config set @kuldep7:registry https://npm.pkg.github.com/```
 
 - **Note**: If you encounter a 401 Unauthorized error, add a GitHub Personal Access Token (PAT). See [Authentication](#authentication) below.
 
 2.  **Install the CLI**  
     Install globally to use from anywhere:
 
-    `npm install -g @kuldep7/awesome-react`
+    ```npm install -g @kuldep7/awesome-react```
 
 3.  **Verify Installation**  
     Check it’s installed:
 
-    `create-app --version`
+    ```create-app --version```
 
-    Expected output: 0.0.4 (or the latest version).
+    Expected output: 1.0.0 (or the latest version).
 
 ### Quick Install (One-Liner)
 
 Run this to configure and install in one go:
 
-`npm config set @kuldep7:registry https://npm.pkg.github.com/ && npm install -g @kuldep7/awesome-react`
+```npm config set @kuldep7:registry https://npm.pkg.github.com/ && npm install -g @kuldep7/awesome-react```
 
 - If a 401 error occurs, configure a PAT as described in [Authentication](#authentication).
 
@@ -43,18 +46,22 @@ Run this to configure and install in one go:
 
 Once installed, use the create-app command to scaffold a new React project:
 
-`create-app`
+```create-app```
 
 - Follow the prompts to customize your project (e.g., project name, template selection).
 - The CLI will generate a directory with the React project structure based on template-main.
 
 ### Example
 
-`create-app # Prompt: Project name? my-react-app # Creates ./my-react-app/ with React files cd my-react-app npm install npm start`
+create-app \
+ * Prompt: Project name? my-react-app  
+ * Creates ./my-react-app/ with React files 
+ * cd my-react-app && npm install && npm start
 
 ## Authentication
 
-GitHub Packages may require authentication for scoped packages, even from a public repository. If you see a 401 Unauthorized error during installation, you’ll need a GitHub PAT with the read:packages scope.
+GitHub Packages may require authentication for scoped packages, even from a public repository. 
+- If you see a 401 Unauthorized error during installation, you’ll need a GitHub PAT with the read:packages scope.
 
 ### Creating a GitHub PAT
 
@@ -74,20 +81,21 @@ GitHub Packages may require authentication for scoped packages, even from a publ
 
 Update your ~/.npmrc:
 
-`npm config set //npm.pkg.github.com/:_authToken=ghp_abc123...`
+```npm config set //npm.pkg.github.com/:_authToken=ghp_abc123...```
 
 - Replace ghp_abc123... with your actual token.
 - Verify:
 
-  `cat ~/.npmrc`
+  ```cat ~/.npmrc```
 
   Expected:
 
-  `@kuldep7:registry=https://npm.pkg.github.com/ //npm.pkg.github.com/:_authToken=ghp_abc123...`
+  - ```@kuldep7:registry=https://npm.pkg.github.com/```
+  -  ``` //npm.pkg.github.com/:_authToken=ghp_abc123...```
 
 Retry installation:
 
-`npm install -g @kuldep7/awesome-react`
+```npm install -g @kuldep7/awesome-react```
 
 ## Development
 
@@ -95,13 +103,13 @@ Retry installation:
 
 Clone the repo and install dependencies:
 
-`git clone https://github.com/kuldep7/awesome-react.git cd awesome-react npm install`
+```git clone https://github.com/kuldep7/awesome-react.git && cd awesome-react && npm install```
 
 ### Build
 
 Compile src/ into dist/:
 
-`npm run build`
+```npm run build```
 
 - Uses unbuild to generate dist/index.mjs.
 
@@ -109,13 +117,13 @@ Compile src/ into dist/:
 
 Pack and install locally:
 
-`npm run pack npm install -g ./kuldep7-awesome-react-0.0.4.tgz create-app`
+```npm run pack npm install -g ./kuldep7-awesome-react-0.0.4.tgz create-app```
 
 ### Publish (Manual)
 
 For maintainers:
 
-`npm publish --registry=https://npm.pkg.github.com/`
+```npm publish --registry=https://npm.pkg.github.com/```
 
 - Requires a PAT with write:packages scope in ~/.npmrc.
 
@@ -136,7 +144,12 @@ Have ideas? Suggest them in the [Issues](https://github.com/kuldep7/awesome-reac
 
 ## Project Structure
 
-`awesome-react/ ├── dist/ # Built CLI (generated) ├── src/ # Source code ├── template-main/ # Default project template ├── package.json # Dependencies and config └── README.md # This file`
+awesome-react/ \
+├── dist/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&nbsp;# Built CLI (generated)  
+├── src/&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&nbsp;&nbsp;# Source code \
+├── template-main/&emsp;&emsp;&emsp;&emsp; # Default project template  \
+├── package.json&emsp;&emsp;&emsp;&emsp;&emsp; # Dependencies and config <br/> 
+└── README.md  &emsp;&emsp;&emsp;&emsp;&emsp; # This file
 
 ## Contributing
 
