@@ -14,7 +14,9 @@
       "stylelint",
       "stylelint-config-standard-scss",
       "vitest",
-      "globals"
+      "globals",
+      "eslint-plugin-react-refresh",
+      "eslint-plugin-react-hooks"
     ],
     "eslint": {
       "extends": [
@@ -22,7 +24,6 @@
         "plugin:react/recommended",
         "plugin:prettier/recommended"
       ],
-      "plugins": ["react", "react-hooks"],
       "rules": {
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "warn",
@@ -33,13 +34,8 @@
   },
   "tailwind": {
     "eslint": {
-      "extends": ["plugin:tailwindcss/recommended"],
-      "plugins": ["tailwindcss", "prettier-plugin-tailwindcss"],
-      "rules": {
-        "tailwindcss/classnames-order": "warn",
-        "tailwindcss/no-custom-classname": "warn",
-        "tailwindcss/no-contradicting-classname": "error"
-      }
+      "rules": {},
+      "extends": []
     },
     "dependencies": [],
     "devDependencies": [
@@ -57,14 +53,14 @@
       "@typescript-eslint/eslint-plugin",
       "@typescript-eslint/parser",
       "typescript",
-      "vite-tsconfig-paths"
+      "vite-tsconfig-paths",
+      "typescript-eslint"
     ],
     "eslint": {
       "extends": [
         "plugin:@typescript-eslint/eslint-recommended",
         "plugin:@typescript-eslint/recommended"
       ],
-      "plugins": ["@typescript-eslint"],
       "rules": {
         "@typescript-eslint/explicit-module-boundary-types": "off",
         "@typescript-eslint/no-non-null-assertion": "off"

@@ -33,6 +33,8 @@ import PACKAGE_CONFIG, {
 import MAIN_FILE_CONTENT from './constants/mainTemplateContent';
 import appContent from './constants/appComponent';
 import VITE_CONFIG from './constants/viteConfig';
+import eslintTSConfig from './constants/eslintTSconfig';
+import eslintJSconfig from './constants/eslintJSconfig';
 
 const mainConfigRegex = new RegExp(/~~(.*?)~~/g);
 
@@ -231,8 +233,7 @@ async function init() {
   const { eslint, ...packageJsonDependencies } = PACKAGE_CONFIG.common;
 
   // Read the contents of .eslintrc and package.json files in the template directory
-  let eslintrc = await fs.promises.readFile(`${templateDir}/.eslintrc`, 'utf8');
-  eslintrc = { ...JSON.parse(eslintrc), ...eslint };
+  let eslintConfig = eslintJSconfig;
   let packageJson = await fs.promises.readFile(
     `${templateDir}/package_json`,
     'utf8'
@@ -241,6 +242,7 @@ async function init() {
 
   const viteImports = [];
   const vitePlugins = [];
+  let eslintRules = {};
 
   const packageJsonObj = {
     ...JSON.parse(packageJson),
@@ -266,9 +268,14 @@ async function init() {
 
   // If Tailwind CSS is enabled, mutate the configs for ESLint and package.json
   if (isTailwindSelected) {
-    mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'tailwind');
+    mutateConfigs({ packageJson: packageJsonObj }, 'tailwind');
     viteImports.push("import tailwindcss from '@tailwindcss/vite'");
     vitePlugins.push('tailwindcss()');
+
+    eslintRules = {
+      ...eslintRules,
+      ...PACKAGE_CONFIG.tailwind.eslint.rules
+    };
 
     writeToFile(
       `src/index.css`,
@@ -280,7 +287,7 @@ async function init() {
   // If a UI library is selected, mutate the configs for ESLint and package.json
   if (uiLibrary !== 'none') {
     if (uiLibrary === 'mui') {
-      mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'mui');
+      mutateConfigs({ packageJson: packageJsonObj }, 'mui');
       const mainFilePHMap: Record<string, string> = {};
       MUI_CONFIG.muiImports.forEach((key) => {
         const value = MAIN_CONFIG[key as keyof typeof MAIN_CONFIG];
@@ -319,7 +326,7 @@ async function init() {
 
   // If TypeScript is enabled, mutate the configs for ESLint and package.json
   if (isTypescriptSelected) {
-    mutateConfigs({ eslintrc, packageJson: packageJsonObj }, 'typescript');
+    mutateConfigs({ packageJson: packageJsonObj }, 'typescript');
     const indexHtmlPath = templateDir + '/index.html';
     const tsConfig = { ...TS_CONFIG.app };
     const tsConfigAliases = generateJsTsConfigAlias(ALIASES);
@@ -327,6 +334,7 @@ async function init() {
       ...tsConfig.compilerOptions.paths,
       ...tsConfigAliases
     };
+    eslintConfig = eslintTSConfig;
 
     let indexHtmlContent = await fs.promises.readFile(indexHtmlPath, 'utf8');
     indexHtmlContent = indexHtmlContent.replace('src/main.jsx', 'src/main.tsx');
@@ -384,6 +392,17 @@ async function init() {
     'vite-resolve-alias': viteAliasStr
   };
   viteConfig = updateConfigPlaceholders(viteConfig, viteConfigPlaceholderMap);
+
+  const eslintConfigPlaceholderMap = {
+    // removing curly braces from the JSON string to avoid those in config
+    'eslint-rules': JSON.stringify(eslintRules, null, 2).replace(/[\{\}]/g, '')
+  };
+
+  eslintConfig = updateConfigPlaceholders(
+    eslintConfig,
+    eslintConfigPlaceholderMap
+  );
+
   // Read the contents of all files in the template directory except .eslintrc and package.json
   const files = fs.readdirSync(templateDir);
   for (const file of files.filter((f) => !filesToExclude.includes(f))) {
@@ -392,7 +411,7 @@ async function init() {
 
   // Define the files to be written and their contents
   const filesToWrite = [
-    { filename: '.eslintrc', content: JSON.stringify(eslintrc, null, 2) },
+    { filename: 'eslint.config.mjs', content: eslintConfig },
     {
       filename: 'package.json',
       content: JSON.stringify(packageJsonObj, null, 2)
@@ -423,24 +442,12 @@ async function init() {
 }
 
 // This function takes the eslintrc and packageJson objects and mutates them according to the type of feature being added
-async function mutateConfigs(
-  { eslintrc, packageJson }: any,
-  type: IMutateConfig
-) {
+async function mutateConfigs({ packageJson }: any, type: IMutateConfig) {
   const { eslint, ...packageJsonDependencies } = PACKAGE_CONFIG[type];
 
   // add the dependencies and eslint configurations from the MAIN_CONFIG object to the respective objects
   Object.entries(packageJsonDependencies).map(([key, value]) => {
     packageJson[key] = [...new Set([...packageJson[key], ...value])];
-  });
-  Object.entries(eslint).map(([key, value]) => {
-    if (Array.isArray(value)) {
-      eslintrc[key] = [...new Set([...eslintrc[key], ...value])];
-    } else if (typeof value === 'string') {
-      eslintrc[key] = value;
-    } else {
-      eslintrc[key] = { ...eslintrc[key], ...value };
-    }
   });
 }
 
