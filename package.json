@@ -1,6 +1,6 @@
 {
   "name": "@kuldep7/awesome-react",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Kuldeep Suthar",
   "license": "ISC",
   "description": "A CLI to scaffold awesome React projects",
