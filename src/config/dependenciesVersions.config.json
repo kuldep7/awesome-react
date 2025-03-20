@@ -32,6 +32,7 @@
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.0.7",
     "stylelint": "^16.14.1",
-    "stylelint-config-standard-scss": "^14.0.0"
+    "stylelint-config-standard-scss": "^14.0.0",
+    "globals": "^15.13.0"
   }
 }

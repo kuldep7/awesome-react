@@ -13,7 +13,8 @@
       "husky",
       "stylelint",
       "stylelint-config-standard-scss",
-      "vitest"
+      "vitest",
+      "globals"
     ],
     "eslint": {
       "extends": [
