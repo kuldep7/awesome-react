@@ -35,6 +35,7 @@ import appContent from './constants/appComponent';
 import VITE_CONFIG from './constants/viteConfig';
 import eslintTSConfig from './constants/eslintTSconfig';
 import eslintJSconfig from './constants/eslintJSconfig';
+import mainCssContent from './constants/mainCss';
 
 const mainConfigRegex = new RegExp(/~~(.*?)~~/g);
 
@@ -217,6 +218,7 @@ async function init() {
   const pkgManager = pkgInfo ? pkgInfo.name : 'npm';
   const filesToExclude = ['.eslintrc', 'package.json', 'vite.config.js'];
   let mainFileContent = MAIN_FILE_CONTENT;
+  let mainCss = mainCssContent;
 
   console.log(`${reset(`\nScaffolding project in ${root}...\n`)}`);
 
@@ -256,8 +258,6 @@ async function init() {
     fs.mkdirSync(srcDir, { recursive: true });
   }
 
-  fs.writeFileSync(`${root}/src/index.css`, '');
-
   try {
     const file = `${root}/src/App.${isTypescriptSelected ? 'tsx' : 'jsx'}`;
     fs.writeFileSync(file, appContent);
@@ -277,11 +277,7 @@ async function init() {
       ...PACKAGE_CONFIG.tailwind.eslint.rules
     };
 
-    writeToFile(
-      `src/index.css`,
-      { root, templateDir },
-      TAILWIND_CONFIG.files['src/index.css']
-    );
+    mainCss = TAILWIND_CONFIG.files['src/index.css'] + mainCss;
   }
 
   // If a UI library is selected, mutate the configs for ESLint and package.json
@@ -315,11 +311,7 @@ async function init() {
       );
 
       if (isTailwindSelected) {
-        writeToFile(
-          'src/index.css',
-          { root, templateDir },
-          MUI_CONFIG.indexCSS
-        );
+        mainCss = MUI_CONFIG.indexCSS + mainCss;
       }
     }
   }
@@ -423,6 +415,7 @@ async function init() {
   for (const file of filesToWrite) {
     writeToFile(file.filename, { templateDir, root }, file.content);
   }
+  writeToFile('src/index.css', { root, templateDir }, mainCss);
 
   executeCliCommand(
     'npx',
